@@ -38,7 +38,7 @@ export function WaitlistForm() {
           apikey: SUPABASE_KEY,
           ...(USE_BEARER_AUTH ? { Authorization: `Bearer ${SUPABASE_KEY}` } : {}),
           "Content-Type": "application/json",
-          Prefer: "return=minimal,resolution=ignore-duplicates",
+          Prefer: "return=minimal",
         },
         body: JSON.stringify({ email: normalizedEmail }),
       });
