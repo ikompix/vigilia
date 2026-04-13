@@ -47,7 +47,27 @@ export function WaitlistForm() {
         return;
       }
 
-      setError("Erreur lors de l'inscription. Reessayez dans un instant.");
+      let details = "";
+
+      try {
+        const payload = await response.json();
+        details =
+          payload.message || payload.error_description || payload.error || payload.hint || "";
+      } catch {
+        details = await response.text();
+      }
+
+      if (response.status === 401 || response.status === 403) {
+        setError("Acces refuse par Supabase. Verifiez la policy d'insertion de la table waitlist.");
+        return;
+      }
+
+      if (details) {
+        setError(`Erreur inscription (${response.status}) : ${details}`);
+        return;
+      }
+
+      setError(`Erreur lors de l'inscription (${response.status}). Reessayez dans un instant.`);
     } catch {
       setError("Erreur reseau. Verifiez votre connexion puis recommencez.");
     } finally {
