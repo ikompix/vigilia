@@ -4,6 +4,8 @@ import { FormEvent, useState } from "react";
 
 const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const SUPABASE_KEY = process.env.NEXT_PUBLIC_SUPABASE_KEY;
+const USE_BEARER_AUTH =
+  SUPABASE_KEY && !SUPABASE_KEY.startsWith("sb_publishable_") && !SUPABASE_KEY.startsWith("sb_secret_");
 
 export function WaitlistForm() {
   const [email, setEmail] = useState("");
@@ -34,7 +36,7 @@ export function WaitlistForm() {
         method: "POST",
         headers: {
           apikey: SUPABASE_KEY,
-          Authorization: `Bearer ${SUPABASE_KEY}`,
+          ...(USE_BEARER_AUTH ? { Authorization: `Bearer ${SUPABASE_KEY}` } : {}),
           "Content-Type": "application/json",
           Prefer: "return=minimal,resolution=ignore-duplicates",
         },
