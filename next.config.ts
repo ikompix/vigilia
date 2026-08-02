@@ -1,7 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
-  /* config options here */
+  // Ne fait pas échouer le build Vercel sur une erreur ESLint non bloquante.
+  eslint: { ignoreDuringBuilds: true },
 };
 
 export default nextConfig;

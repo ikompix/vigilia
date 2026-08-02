@@ -1,0 +1,121 @@
+// ERP interne multi-clients — schéma de données (socle, Phase 1)
+// Docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider  = "postgresql"
+  url       = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
+}
+
+/// Un client de ton activité. Chaque client a une adresse mail dédiée
+/// (côté client) depuis laquelle les mails sont transférés vers la boîte générique.
+model Client {
+  id        String   @id @default(cuid())
+  name      String
+  /// Adresse mail (côté client) — sert à attribuer les mails transférés.
+  address   String   @unique
+  color     String   @default("#6366f1")
+  createdAt DateTime @default(now())
+
+  emails   Email[]
+  meetings Meeting[]
+
+  @@map("clients")
+}
+
+/// Un mail transféré vers la boîte générique, rattaché à un client.
+model Email {
+  id          String   @id @default(cuid())
+  /// Message-ID d'origine — clé de déduplication.
+  messageId   String   @unique
+  clientId    String?
+  client      Client?  @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  fromAddress String
+  fromName    String?
+  /// Destinataire d'origine (avant transfert) — base de l'attribution au client.
+  toAddress   String
+  subject     String
+  preview     String   @default("")
+  bodyText    String?
+  receivedAt  DateTime
+  isRead      Boolean  @default(false)
+  createdAt   DateTime @default(now())
+
+  /// Si ce mail est une invitation à une réunion (pièce .ics).
+  meeting Meeting?
+
+  @@index([clientId])
+  @@index([receivedAt])
+  @@map("emails")
+}
+
+enum MeetingStatus {
+  CONFIRMED
+  CANCELLED
+}
+
+/// Une réunion, reconstruite depuis une invitation .ics transférée.
+model Meeting {
+  id       String  @id @default(cuid())
+  /// UID iCalendar — clé de déduplication et de mise à jour.
+  uid      String  @unique
+  /// SEQUENCE iCalendar — pour appliquer les mises à jour dans le bon ordre.
+  sequence Int     @default(0)
+
+  clientId String?
+  client   Client? @relation(fields: [clientId], references: [id], onDelete: SetNull)
+
+  title     String
+  location  String?
+  organizer String?
+  startsAt  DateTime
+  endsAt    DateTime?
+  status    MeetingStatus @default(CONFIRMED)
+
+  /// Mail d'invitation source (le cas échéant).
+  sourceEmailId String? @unique
+  sourceEmail   Email?  @relation(fields: [sourceEmailId], references: [id], onDelete: SetNull)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([clientId])
+  @@index([startsAt])
+  @@map("meetings")
+}
+
+/// La todo générée par Claude pour une journée donnée (Phase 3).
+model DailyTodo {
+  id          String   @id @default(cuid())
+  date        DateTime @unique @db.Date
+  /// Court résumé rédigé par Claude.
+  summary     String?
+  /// Modèle utilisé (trace).
+  model       String?
+  generatedAt DateTime @default(now())
+
+  items TodoItem[]
+
+  @@map("daily_todos")
+}
+
+/// Une tâche individuelle dans la todo du jour.
+model TodoItem {
+  id          String    @id @default(cuid())
+  dailyTodoId String
+  dailyTodo   DailyTodo @relation(fields: [dailyTodoId], references: [id], onDelete: Cascade)
+  /// Client concerné par la tâche (tag simple, optionnel).
+  clientId    String?
+  text        String
+  /// 1 = haute, 2 = normale, 3 = basse.
+  priority    Int       @default(2)
+  done        Boolean   @default(false)
+  order       Int       @default(0)
+
+  @@index([dailyTodoId])
+  @@map("todo_items")
+}
